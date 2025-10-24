@@ -1,5 +1,11 @@
 # noAI (nodleAI) agent
 
+<div align="center">
+  <a href="https://nodle.com">
+    <img alt="ollama" width="240" src="docs/noai.png">
+  </a>
+</div>
+
 **noAI** is a lightweight macOS app that turns [Ollama](https://github.com/ollama/ollama)-powered language models into a coding and creativity companion.  
 Think of it as a local-first AI agent where you can spin up different models (Llama, Gemma, code-specialized LLMs, etc.) and use them for tasks like:
 
