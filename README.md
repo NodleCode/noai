@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://nodle.com">
-    <img alt="ollama" width="240" src="docs/noai.png">
+    <img alt="nodleai" width="360" src="docs/noai.png">
   </a>
 </div>
 
