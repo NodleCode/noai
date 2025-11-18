@@ -58,6 +58,90 @@ It’s meant to feel like a “coding buddy” with a bit of personality — qui
 
    You can also pull other models, e.g. `gemma`, `codellama`, or any from [Ollama's model library](https://ollama.ai/library).
 
+---
+
+### Optional: Enable Image Generation (Stable Diffusion via Core ML)
+
+noAI can also generate images in dedicated **“Image Generation”** threads using Apple’s Core ML Stable Diffusion models.
+
+#### 1. Download a Core ML Stable Diffusion model
+
+Go to Apple’s Core ML Stable Diffusion collection on Hugging Face:
+
+- https://huggingface.co/collections/apple/core-ml-stable-diffusion
+
+Pick a model you like (e.g. **Stable Diffusion 1.5** or **2.1**) and download / clone it.
+
+For each model, you’ll end up with a folder structure similar to:
+
+```text
+coreml-stable-diffusion-*-*/        # model root
+  original/
+    compiled/   <-- ✅ this is the folder you need
+    packages/
+  split_einsum/
+    compiled/
+    packages/
+```
+
+For noAI you only need the **`original/compiled`** folder for the model you want to use.
+
+- ✅ Required: `original/compiled/` (this is what the app points at)
+- ❌ Optional to keep/remove: `packages/` folders, or the unused variant (`split_einsum`) if you want to save disk space
+
+#### 2. Point noAI at the model folder
+
+1. Open **noAI**.
+2. In the sidebar, expand **Settings**.
+3. In the **Image generation** section:
+   - Click **“Choose folder…”**.
+   - Select the **`original/compiled`** folder of the Core ML SD model you downloaded.  
+     (For example: `.../coreml-stable-diffusion-v1-5/coreml-stable-diffusion-v1-5/original/compiled`.)
+4. The status should change to something like **“Stable Diffusion ready”**.
+
+The app will remember this folder using a security-scoped bookmark, so you don’t need to reselect it every launch.
+
+#### 3. Use image generation in the UI
+
+- In the sidebar header, click **New ▾ → New image generation**.
+- This creates a special **image thread**:
+  - The composer shows an **“Image generation”** pill (no model selector).
+  - Every prompt you send will:
+    - Add your text message.
+    - Generate an image locally with Stable Diffusion.
+    - Display the image as a bubble in the chat.
+
+Your local LLM chat threads and image-generation threads are completely separate, so the user doesn’t have to think about which LLM model is “linked” to the image generation — it always uses the selected Core ML Stable Diffusion model.
+
+
+---
+
+### Optional: Use Ollama Cloud Models
+
+Ollama Cloud models let you run large models (`*:cloud`) on Ollama’s hosted hardware while still using your **local** noAI app.
+
+#### 1. Sign in to Ollama Cloud
+
+From your terminal:
+
+```bash
+ollama signin
+```
+
+Follow the instructions to sign in or create an account in your browser.
+
+#### 2. Run or pull a cloud model
+
+Once signed in, you can pull a cloud model directly:
+
+```bash
+ollama pull gpt-oss:120b-cloud
+```
+
+Cloud models use the `:cloud` suffix (for example, `gpt-oss:120b-cloud`). They appear in your model list just like local models, but when you run them, the heavy lifting happens on Ollama’s servers.
+
+---
+
 ### Installation
 ---
 You have two options to get started:

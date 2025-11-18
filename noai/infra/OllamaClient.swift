@@ -66,7 +66,7 @@ final class OllamaClient: ObservableObject {
         var temperature: Double = 0.4
         var top_p: Double = 0.9
         var top_k: Int = 40
-        var num_predict: Int = 1024
+        var num_predict: Int = 4096
     }
     
     struct ChatDelta {

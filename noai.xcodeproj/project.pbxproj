@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D86D4DA22ECBC82300431E9E /* StableDiffusion in Frameworks */ = {isa = PBXBuildFile; productRef = D86D4DA12ECBC82300431E9E /* StableDiffusion */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D869883B2EA9F52300924351 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D86D4DA22ECBC82300431E9E /* StableDiffusion in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = noai;
 			packageProductDependencies = (
+				D86D4DA12ECBC82300431E9E /* StableDiffusion */,
 			);
 			productName = noai;
 			productReference = D86988242EA9F52200924351 /* noai.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = D869881B2EA9F52200924351;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D86D4DA02ECBC82300431E9E /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D86988252EA9F52200924351 /* Products */;
 			projectDirPath = "";
@@ -395,7 +404,7 @@
 				CODE_SIGN_ENTITLEMENTS = noai/noai.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"noai/SupportingFiles/Preview Content\"";
 				DEVELOPMENT_TEAM = B923R5A4X7;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -406,7 +415,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nodle.noai;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -422,7 +431,7 @@
 				CODE_SIGN_ENTITLEMENTS = noai/noai.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"noai/SupportingFiles/Preview Content\"";
 				DEVELOPMENT_TEAM = B923R5A4X7;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -433,7 +442,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nodle.noai;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -549,6 +558,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D86D4DA02ECBC82300431E9E /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/ml-stable-diffusion";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D86D4DA12ECBC82300431E9E /* StableDiffusion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D86D4DA02ECBC82300431E9E /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */;
+			productName = StableDiffusion;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D869881C2EA9F52200924351 /* Project object */;
 }

@@ -6,11 +6,17 @@
 //
 import SwiftUI
 
+enum ComposerMode {
+    case chat
+    case image
+}
+
 struct ComposerPill: View {
     @Binding var text: String
     let models: [OllamaModelTag]
     @Binding var selection: OllamaModelTag?
     var disabled: Bool
+    var mode: ComposerMode = .chat
     var onSend: () -> Void
 
     private let corner: CGFloat = 24
@@ -27,14 +33,25 @@ struct ComposerPill: View {
                             .padding(.top, 8)
                             .padding(.leading, 12)
                     }
+
                     TextEditor(text: $text)
                         .font(.system(size: 16))
                         .foregroundStyle(Theme.textPrimary)
                         .scrollContentBackground(.hidden)
                         .background(Color.clear)
-                        .frame(minHeight: 32, maxHeight: 68)
+                        .frame(minHeight: 32, maxHeight: 68, alignment: .topLeading)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
+                        .onChange(of: text) { oldValue, newValue in
+                            guard newValue.count == oldValue.count + 1,
+                                  newValue.last == "\n" else {
+                                return
+                            }
+
+                            text = String(newValue.dropLast())
+
+                            onSend()
+                        }
                 }
                 .padding(.trailing, 160)
 
@@ -51,25 +68,48 @@ struct ComposerPill: View {
 
     private var controls: some View {
         HStack(spacing: 10) {
-            Menu {
-                ForEach(models) { tag in Button(tag.model) { selection = tag } }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(selection?.model ?? "select model")
-                        .lineLimit(1)
-                        .foregroundStyle(Theme.textPrimary)
+            if mode == .chat {
+                Menu {
+                    ForEach(models) { tag in
+                        Button(tag.model) { selection = tag }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(selection?.model ?? "select model")
+                            .lineLimit(1)
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Theme.bgPanel)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Theme.strokeSoft)
+                    )
                 }
+                .menuStyle(.borderlessButton)
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Image generation")
+                        .font(.caption)
+                }
+                .foregroundStyle(Theme.textSecondary)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 12)
                 .background(Theme.bgPanel)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.strokeSoft))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.20), radius: 4, y: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Theme.strokeSoft)
+                )
             }
-            .menuStyle(.borderlessButton)
 
             let isEmpty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            Button(action: onSend) {
+
+            Button {
+                onSend()
+            } label: {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 16, weight: .bold))
                     .frame(width: 36, height: 36)

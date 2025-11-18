@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import Combine
+import AppKit
 
 @MainActor
 final class ChatViewModel: ObservableObject {
@@ -21,12 +22,19 @@ final class ChatViewModel: ObservableObject {
     @Published var pulling: Bool = false
     @Published var reachable: Bool = false
     @Published var baseURL: URL = URL(string: "http://127.0.0.1:11434")!
+    @Published var imageGenerating: Bool = false
+    @Published var sdModelFolderPath: String? = nil
     let exportUseCase = ExportUseCase()
     let threadUseCase = ThreadUseCase()
     let clientUseCase = ClientUseCase()
+    private let imageGenUseCase = ImageGenerationUseCase()
     private var cancellables = Set<AnyCancellable>()
     
     var selectedThreadIndex: Int? { threads.firstIndex { $0.id == (selectedThreadID ?? threads.first?.id) } }
+    
+    var isImageModelConfigured: Bool {
+        imageGenUseCase.isConfigured
+    }
     
     init() {
         let loaded = threadUseCase.load()
@@ -34,7 +42,10 @@ final class ChatViewModel: ObservableObject {
         self.selectedThreadID = threads.first?.id
         self.baseURL = clientUseCase.baseURL
         self.reachable = clientUseCase.reachable
-        
+        setupClientBindings()
+    }
+    
+    private func setupClientBindings() {
         clientUseCase.$baseURL
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.baseURL = $0 }
@@ -50,18 +61,35 @@ final class ChatViewModel: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] in self?.clientUseCase.baseURL = $0 }
             .store(in: &cancellables)
+        
+        imageGenUseCase.$modelFolderPath
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] path in
+                    self?.sdModelFolderPath = path
+                }
+                .store(in: &cancellables)
     }
     
     func saveThreads() {
         threadUseCase.saveThreads(threads: threads)
     }
     
-    func newThread(prefill: String? = nil) {
-        var t = ChatThread()
-        if let first = prefill, !first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+    func newThread(kind: ChatThread.Kind = .chat, prefill: String? = nil) {
+        var t = ChatThread(kind: kind)
+
+        if let first = prefill,
+           !first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             t.title = makeTitle(from: first)
         }
-        t.selectedModel = models.first
+
+        if kind == .chat {
+            t.selectedModel = models.first
+        } else {
+            if t.title == "New Chat" {
+                t.title = "Image Generation"
+            }
+        }
+
         threads.insert(t, at: 0)
         selectedThreadID = t.id
         saveThreads()
@@ -89,40 +117,63 @@ final class ChatViewModel: ObservableObject {
     }
     
     func send() async {
-        guard clientUseCase.reachable,
-              let idx = selectedThreadIndex
-        else { return }
-        
-        var modelName = threads[idx].selectedModel?.model
-        if modelName == nil { modelName = models.first?.model }
-        guard let model = modelName,
-              !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return }
-        
-        streamingModelName = model
-        
-        if threads[idx].title == "New Chat" {
-            threads[idx].title = makeTitle(from: input)
+        guard let idx = selectedThreadIndex else { return }
+
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let thread = threads[idx]
+
+        if thread.kind == .image {
+            let prompt = trimmed
+            input = ""
+            await generateImageMessage(prompt: prompt, threadIndex: idx)
+            return
         }
-        
+
+        if trimmed.lowercased().hasPrefix("/img ") {
+            let prompt = String(trimmed.dropFirst(5))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            input = ""
+            guard !prompt.isEmpty else { return }
+            await generateImageMessage(prompt: prompt, threadIndex: idx)
+            return
+        }
+
+        guard clientUseCase.reachable else { return }
+
+        var modelName = thread.selectedModel?.model
+        if modelName == nil { modelName = models.first?.model }
+        guard let model = modelName else { return }
+
+        streamingModelName = model
+
+        if threads[idx].title == "New Chat" {
+            threads[idx].title = makeTitle(from: trimmed)
+        }
+
         if threads[idx].messages.first?.role == .system {
             threads[idx].messages.removeFirst()
         }
-        
-        let userMsg = ChatMessage(role: .user, content: input)
+
+        let userMsg = ChatMessage(role: .user, content: trimmed)
         input = ""
         threads[idx].messages.append(userMsg)
         threads[idx].messages.append(ChatMessage(role: .assistant, content: "", thinking: ""))
         streaming = true
-        
+
         do {
             let aidx = threads[idx].messages.count - 1
-            for try await delta in clientUseCase.chatStream(model: model, messages: threads[idx].messages, options: options) {
+            for try await delta in clientUseCase.chatStream(
+                model: model,
+                messages: threads[idx].messages,
+                options: options
+            ) {
                 guard threads.indices.contains(idx),
                       threads[idx].messages.indices.contains(aidx) else {
                     break
                 }
-                
+
                 if let t = delta.thinking, !t.isEmpty {
                     threads[idx].messages[aidx].thinking = (threads[idx].messages[aidx].thinking ?? "") + t
                 }
@@ -138,11 +189,50 @@ final class ChatViewModel: ObservableObject {
                 }
             }
         } catch {
-            threads[idx].messages.append(ChatMessage(role: .assistant, content: "(error: \(error.localizedDescription))"))
+            threads[idx].messages.append(
+                ChatMessage(role: .assistant,
+                            content: "(error: \(error.localizedDescription))")
+            )
         }
-        
+
         streaming = false
         streamingModelName = nil
+        saveThreads()
+    }
+    
+    private func generateImageMessage(prompt: String, threadIndex idx: Int) async {
+        threads[idx].messages.append(ChatMessage(role: .user, content: prompt))
+        saveThreads()
+
+        guard imageGenUseCase.isConfigured else {
+            threads[idx].messages.append(
+                ChatMessage(
+                    role: .assistant,
+                    content: "Stable Diffusion model folder is not set. Choose it in the sidebar settings."
+                )
+            )
+            saveThreads()
+            return
+        }
+
+        imageGenerating = true
+        defer { imageGenerating = false }
+
+        do {
+            let data = try await imageGenUseCase.generateImage(prompt: prompt)
+
+            threads[idx].messages.append(
+                ChatMessage(role: .assistant, content: "", thinking: nil, imageData: data)
+            )
+        } catch {
+            threads[idx].messages.append(
+                ChatMessage(
+                    role: .assistant,
+                    content: "(image error: \(error.localizedDescription))"
+                )
+            )
+        }
+
         saveThreads()
     }
     
@@ -189,5 +279,26 @@ final class ChatViewModel: ObservableObject {
     
     func exportAllThreadsAsJSON() {
         exportUseCase.exportAllThreadsAsJSON(threads: threads)
+    }
+    
+    func saveImage(_ data: Data) {
+        imageGenUseCase.saveImage(data)
+    }
+    
+    func chooseStableDiffusionFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose"
+        panel.title = "Choose Stable Diffusion model folder (original/compiled)"
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            imageGenUseCase.setModelFolder(url: url)
+        }
+    }
+    
+    func clearStableDiffusionFolder() {
+        imageGenUseCase.clearModelFolder()
     }
 }
